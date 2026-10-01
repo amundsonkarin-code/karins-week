@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Karin's Week">
+<title>Karin's Week</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --work:    #7C6FF7;
+    --family:  #F5886B;
+    --health:  #5DBE9C;
+    --admin:   #F0C040;
+    --locked:  #9B8FF9;
+    --conflict:#FF4444;
+    --bg:      #0F0F14;
+    --surface: #18181F;
+    --card:    #1E1E28;
+    --border:  rgba(255,255,255,0.07);
+    --text:    #F0EEF8;
+    --muted:   #8885A0;
+    --radius:  14px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100dvh;
+    padding-top: var(--safe-top);
+    padding-bottom: calc(var(--safe-bot) + 16px);
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--bg); padding: 18px 20px 12px;
+    border-bottom: 1px solid var(--border); backdrop-filter: blur(12px);
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+  .header h1 { font-family: 'DM Serif Display', serif; font-size: 26px; font-weight: 400; line-height: 1.1; letter-spacing: -0.3px; }
+  .header h1 span { font-style: italic; color: var(--work); }
+  .week-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; margin-top: 4px; }
+  .header-btns { display: flex; gap: 8px; align-items: center; }
+
+  /* BUTTONS */
+  .pill-btn {
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    padding: 8px 14px; border-radius: 50px; cursor: pointer;
+    display: flex; align-items: center; gap: 6px; transition: background 0.2s; white-space: nowrap;
+  }
+  .pill-btn:active { background: #2a2a38; }
+  .pill-btn.loading .spin { display: inline-block; animation: spin 1s linear infinite; }
+  .pill-btn.loading .lbl { display: none; }
+  .pill-btn .spin { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* LEGEND */
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* CONNECT BANNER */
+  .connect-banner {
+    margin: 14px 16px 0;
+    background: linear-gradient(135deg, rgba(124,111,247,0.12), rgba(93,190,156,0.08));
+    border: 1px solid rgba(124,111,247,0.25); border-radius: var(--radius);
+    padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .connect-banner.hidden { display: none; }
+  .connect-text strong { display: block; font-size: 13px; margin-bottom: 2px; }
+  .connect-text span   { font-size: 12px; color: var(--muted); }
+  .g-btn {
+    background: #fff; color: #1f1f1f; border: none; border-radius: 50px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+    padding: 9px 16px; cursor: pointer; display: flex; align-items: center; gap: 7px;
+    white-space: nowrap; flex-shrink: 0; transition: box-shadow 0.2s;
+  }
+  .g-btn:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .g-icon { width: 16px; height: 16px; }
+
+  /* STATUS */
+  .status-bar { margin: 10px 16px 0; font-size: 11px; color: var(--muted); display: none; align-items: center; gap: 6px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .sign-out-link { margin-left: auto; cursor: pointer; color: var(--work); display: none; font-size: 11px; }
+
+  /* SECTION LABEL */
+  .section-label { padding: 14px 16px 0; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* LOADING */
+  .loading-state { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; display: none; }
+  .loading-state.active { display: block; }
+  .loader { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--work); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+
+  /* DAYS */
+  .days-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 12px 16px 20px; display: flex; gap: 12px; }
+  .days-scroll::-webkit-scrollbar { display: none; }
+
+  /* DAY CARD */
+  .day-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); flex: 0 0 220px; overflow: hidden;
+    animation: fadeUp 0.4s ease both;
+  }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  .day-card:nth-child(1){animation-delay:.04s} .day-card:nth-child(2){animation-delay:.08s}
+  .day-card:nth-child(3){animation-delay:.12s} .day-card:nth-child(4){animation-delay:.16s}
+  .day-card:nth-child(5){animation-delay:.20s} .day-card:nth-child(6){animation-delay:.24s}
+  .day-card:nth-child(7){animation-delay:.28s}
+  .day-card.today { border-color: var(--work); box-shadow: 0 0 0 1px var(--work), 0 8px 32px rgba(124,111,247,0.15); }
+
+  .day-header { padding: 14px 14px 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; }
+  .day-name  { font-family: 'DM Serif Display', serif; font-size: 17px; font-weight: 400; }
+  .day-date  { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; }
+  .today-badge { font-size: 9px; background: var(--work); color: #fff; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+  .day-body  { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+
+  /* BLOCKS */
+  .block { border-radius: 10px; padding: 9px 11px; position: relative; overflow: hidden; }
+  .block::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
+  .block.work   { background:rgba(124,111,247,0.12); } .block.work::before   { background:var(--work); }
+  .block.family { background:rgba(245,136,107,0.12); } .block.family::before { background:var(--family); }
+  .block.health { background:rgba(93,190,156,0.12);  } .block.health::before { background:var(--health); }
+  .block.admin  { background:rgba(240,192,64,0.12);  } .block.admin::before  { background:var(--admin); }
+  .block.locked { background:rgba(155,143,249,0.18); border:1px dashed rgba(155,143,249,0.35); }
+  .block.locked::before { background:var(--locked); }
+
+  /* CONFLICT BLOCKS */
+  .block.conflict { background:rgba(255,68,68,0.12) !important; border:1px solid rgba(255,68,68,0.35) !important; }
+  .block.conflict::before { background:var(--conflict) !important; }
+
+  .block-time  { font-size:10px; color:var(--muted); margin-bottom:3px; letter-spacing:0.4px; }
+  .block-title { font-size:13px; font-weight:500; line-height:1.3; }
+  .block-sub   { font-size:11px; color:var(--muted); margin-top:3px; }
+  .badge { display:inline-block; font-size:9px; font-weight:600; text-transform:uppercase; letter-spacing:0.8px; padding:2px 7px; border-radius:20px; margin-top:5px; background:rgba(255,255,255,0.07); color:var(--muted); }
+  .badge.conflict-badge { background:rgba(255,68,68,0.18); color:#FF7070; }
+
+  /* MODAL */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:200; display:flex; align-items:flex-end; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+  .modal-overlay.show { opacity:1; pointer-events:all; }
+  .modal { background:var(--card); border:1px solid var(--border); border-radius:24px 24px 0 0; padding:32px 24px calc(var(--safe-bot) + 32px); width:100%; transform:translateY(100%); transition:transform 0.3s cubic-bezier(.34,1.2,.64,1); text-align:center; }
+  .modal-overlay.show .modal { transform:translateY(0); }
+  .modal h2 { font-family:'DM Serif Display',serif; font-size:22px; font-weight:400; margin-bottom:8px; }
+  .modal p  { font-size:14px; color:var(--muted); margin-bottom:24px; line-height:1.5; }
+  .modal-btns { display:flex; gap:10px; }
+  .btn { flex:1; padding:14px; border-radius:var(--radius); border:none; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:600; cursor:pointer; }
+  .btn-primary   { background:var(--work); color:#fff; }
+  .btn-secondary { background:var(--surface); color:var(--muted); border:1px solid var(--border); }
+
+  /* TOAST */
+  .toast { position:fixed; bottom:calc(var(--safe-bot) + 24px); left:50%; transform:translateX(-50%) translateY(80px); background:var(--card); border:1px solid var(--border); border-radius:50px; padding:10px 20px; font-size:13px; color:var(--text); z-index:999; transition:transform 0.3s cubic-bezier(.34,1.56,.64,1); white-space:nowrap; pointer-events:none; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>Karin's <span>Week</span></h1>
+      <div class="week-label" id="weekLabel">Loading…</div>
+    </div>
+    <div class="header-btns">
+      <button class="pill-btn" id="refreshBtn" onclick="askRefresh()">
+        <span class="spin">◌</span><span class="lbl">↻ Refresh</span>
+      </button>
+    </div>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="dot" style="background:var(--work)"></div> Work</div>
+    <div class="legend-item"><div class="dot" style="background:var(--family)"></div> Family</div>
+    <div class="legend-item"><div class="dot" style="background:var(--health)"></div> Health</div>
+    <div class="legend-item"><div class="dot" style="background:var(--admin)"></div> Admin</div>
+    <div class="legend-item"><div class="dot" style="background:var(--locked);opacity:0.7"></div> 🔒 Ikiora</div>
+    <div class="legend-item"><div class="dot" style="background:var(--conflict)"></div> Conflict</div>
+  </div>
+</div>
+
+<!-- CONNECT BANNER -->
+<div class="connect-banner" id="connectBanner">
+  <div class="connect-text">
+    <strong>Connect Google Calendar</strong>
+    <span>See your real events on your schedule</span>
+  </div>
+  <button class="g-btn" id="gSignInBtn">
+    <svg class="g-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+    Sign in with Google
+  </button>
+</div>
+
+<!-- STATUS -->
+<div class="status-bar" id="statusBar">
+  <div class="status-dot" id="statusDot" style="background:var(--admin)"></div>
+  <span id="statusText">Fixed schedule shown</span>
+  <span class="sign-out-link" id="signOutLink" onclick="signOut()">Sign out</span>
+</div>
+
+<!-- LOADING -->
+<div class="loading-state" id="loadingState"><div class="loader"></div>Syncing your week…</div>
+
+<!-- SECTION LABEL -->
+<div class="section-label" id="sectionLabel"></div>
+
+<!-- DAYS -->
+<div class="days-scroll" id="daysScroll"></div>
+
+<!-- REFRESH MODAL -->
+<div class="modal-overlay" id="refreshModal">
+  <div class="modal">
+    <h2>Refresh your week?</h2>
+    <p>Pull the latest from Google Calendar and rebuild your dashboard.</p>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal()">Not now</button>
+      <button class="btn btn-primary" onclick="confirmRefresh()">Yes, refresh</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG (no secrets here — auth handled by Google's library) ──
+const CLIENT_ID = '943703664387-3kj7ncar226cbv1qngccjng0tcs7ib94.apps.googleusercontent.com';
+const CAL_ID    = 'amundsonkarin@gmail.com';
+const SCOPE     = 'https://www.googleapis.com/auth/calendar.readonly';
+const KEY_TOKEN  = 'karin_gis_token';
+const KEY_EXPIRY = 'karin_gis_expiry';
+const KEY_CACHE  = 'karin_week_cache';
+
+let tokenClient = null;
+let accessToken = null;
+
+// ── TOKEN STORAGE ──
+function saveToken(token, expiresIn) {
+  accessToken = token;
+  localStorage.setItem(KEY_TOKEN,  token);
+  localStorage.setItem(KEY_EXPIRY, Date.now() + (expiresIn - 60) * 1000);
+}
+function loadToken() {
+  const t = localStorage.getItem(KEY_TOKEN);
+  const e = parseInt(localStorage.getItem(KEY_EXPIRY) || '0');
+  if (t && Date.now() < e) { accessToken = t; return true; }
+  return false;
+}
+function clearToken() {
+  accessToken = null;
+  localStorage.removeItem(KEY_TOKEN);
+  localStorage.removeItem(KEY_EXPIRY);
+  localStorage.removeItem(KEY_CACHE);
+}
+function isConnected() { return !!accessToken; }
+
+// ── GOOGLE IDENTITY SERVICES (no client secret needed) ──
+function initGoogleAuth() {
+  if (typeof google === 'undefined') {
+    setTimeout(initGoogleAuth, 200);
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope:     SCOPE,
+    callback:  handleTokenResponse,
+  });
+  document.getElementById('gSignInBtn').onclick = () => tokenClient.requestAccessToken();
+}
+
+function handleTokenResponse(resp) {
+  if (resp.error) {
+    showToast('⚠ Sign-in failed: ' + resp.error);
+    return;
+  }
+  saveToken(resp.access_token, resp.expires_in);
+  updateAuthUI();
+  showToast('✓ Google Calendar connected!');
+  doRefresh(true);
+}
+
+function signOut() {
+  if (accessToken) {
+    google.accounts.oauth2.revoke(accessToken, () => {});
+  }
+  clearToken();
+  updateAuthUI();
+  renderWeek(getWeekDays(), []);
+  showToast('Signed out of Google Calendar');
+}
+
+// ── AUTH UI ──
+function updateAuthUI() {
+  const connected = isConnected();
+  document.getElementById('connectBanner').classList.toggle('hidden', connected);
+  document.getElementById('signOutLink').style.display = connected ? 'inline' : 'none';
+  document.getElementById('statusBar').style.display = 'flex';
+  if (!connected) {
+    document.getElementById('statusDot').style.background = 'var(--admin)';
+    document.getElementById('statusText').textContent = 'Fixed schedule — tap Sign in to load your calendar';
+  }
+}
+
+// ── WEEK HELPERS ──
+function getWeekDays() {
+  const today = new Date(), dow = today.getDay();
+  const mon = new Date(today);
+  mon.setDate(today.getDate() - ((dow + 6) % 7));
+  return Array.from({length:7}, (_, i) => { const d = new Date(mon); d.setDate(mon.getDate()+i); return d; });
+}
+function fmtDate(d) { return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function fmtDay(d)  { return d.toLocaleDateString('en-US',{weekday:'long'}); }
+function isToday(d) { return d.toDateString() === new Date().toDateString(); }
+function setWeekLabel(days) {
+  document.getElementById('weekLabel').textContent = 'Week of ' + fmtDate(days[0]) + ' – ' + fmtDate(days[6]);
+}
+
+// ── TIME HELPERS ──
+// Parse a time string to {start, end} in minutes since midnight.
+// Handles: '5–6am', '8am–12pm', '9–11am', '11am–1pm', '1–5pm',
+//          '12–1pm', '7pm', 'Morning', 'Afternoon', 'Evening', 'All day'
+function parseTimeRange(timeStr) {
+  if (!timeStr) return {start:0, end:0};
+  const t = timeStr.trim();
+  if (t === 'Morning')   return {start:360,  end:720};
+  if (t === 'Afternoon') return {start:720,  end:1020};
+  if (t === 'Evening')   return {start:1020, end:1320};
+  if (t === 'All day')   return {start:0,    end:1440};
+
+  // Parse a single token like '5am', '12pm', '2:30pm'
+  function singleToMin(s) {
+    s = (s||'').trim().toLowerCase().replace(/\s+/g,'');
+    const m = s.match(/^(\d+)(?::(\d+))?(am|pm)$/);
+    if (!m) return null;
+    let h = parseInt(m[1]);
+    const mn = m[2] ? parseInt(m[2]) : 0;
+    if (m[3]==='pm' && h!==12) h += 12;
+    if (m[3]==='am' && h===12) h  = 0;
+    return h*60 + mn;
+  }
+
+  // Try range (en-dash U+2013 or hyphen)
+  const enDash = '–';
+  const sepIdx = t.indexOf(enDash) >= 0 ? t.indexOf(enDash) : (t.indexOf('-') > 0 ? t.indexOf('-') : -1);
+  if (sepIdx > 0) {
+    const rawA = t.slice(0, sepIdx).trim().toLowerCase().replace(/\s+/g,'');
+    const rawB = t.slice(sepIdx + 1).trim().toLowerCase().replace(/\s+/g,'');
+    const aHasAmPm = /[ap]m$/.test(rawA);
+    const bAmPmMatch = rawB.match(/[ap]m$/);
+    // If start has no am/pm, borrow it from end
+    const aFull = (!aHasAmPm && bAmPmMatch) ? rawA + bAmPmMatch[0] : rawA;
+    const start = singleToMin(aFull);
+    const end   = singleToMin(rawB);
+    if (start !== null && end !== null) return {start, end};
+  }
+
+  // Single time: '7pm'
+  const single = singleToMin(t);
+  if (single !== null) return {start: single, end: single + 60};
+  return {start:0, end:0};
+}
+
+// True if two time ranges [s1,e1) and [s2,e2) overlap (0,0 means unknown/skip)
+function overlaps(s1, e1, s2, e2) {
+  if ((s1 === 0 && e1 === 0) || (s2 === 0 && e2 === 0)) return false;
+  return s1 < e2 && s2 < e1;
+}
+
+// ── FIXED SCHEDULE ──
+const MR = { time:'5–6am', title:'Meditate · Yoga · Strength', cat:'health', sub:'Morning ritual' };
+const FIXED = {
+  0:[MR,{time:'9–11am',title:'Slow start · yoga · reflection',cat:'health'},{time:'11am–1pm',title:'Meal prep',cat:'health'},{time:'1–5pm',title:'Family time',cat:'family'},{time:'7pm',title:'Week preview + Claude dashboard',cat:'admin'}],
+  1:[MR,{time:'8am–12pm',title:'Ikiora Deep Work',cat:'locked',sub:'Protected — no scheduling'},{time:'12–1pm',title:'Deadline sweep',cat:'admin'},{time:'Afternoon',title:'Ashland run / errands',cat:'admin'},{time:'Evening',title:'Family — pickup, dinner, kids',cat:'family'}],
+  2:[MR,{time:'8am–12pm',title:'Ikiora Deep Work',cat:'locked',sub:'Protected — no scheduling'},{time:'Afternoon',title:'Walk + yoga',cat:'health'},{time:'Evening',title:'Family — homework, Ieuan care',cat:'family'}],
+  3:[MR,{time:'8am–12pm',title:'Ikiora Deep Work',cat:'locked',sub:'Protected — no scheduling'},{time:'Afternoon',title:'Finance block',cat:'admin'},{time:'Evening',title:'Family — connect, Ieuan routine',cat:'family'}],
+  4:[MR,{time:'8am–12pm',title:'Ikiora Deep Work',cat:'locked',sub:'Protected — no scheduling'},{time:'Afternoon',title:'Digital tidy',cat:'admin'},{time:'Evening',title:'Family — Ren bedtime, Ieuan tasks',cat:'family'}],
+  5:[MR,{time:'8am–12pm',title:'Ikiora Deep Work',cat:'locked',sub:'Protected — no scheduling'},{time:'Afternoon',title:'Health admin calls',cat:'health'},{time:'Evening',title:'Family — wind down, prep weekend',cat:'family'}],
+  6:[MR,{time:'Morning',title:'Time with kids',cat:'family'},{time:'Afternoon',title:'Home power hour',cat:'admin'},{time:'Evening',title:'Rest + dance',cat:'health'}],
+};
+
+// ── GCAL FETCH ──
+function categorizeCal(t) {
+  t = (t||'').toLowerCase();
+  if (t.includes('ikiora')||t.includes('deep work')||t.includes('work')||t.includes('meeting')||t.includes('call')) return 'work';
+  if (t.includes('ieuan')||t.includes('kids')||t.includes('school')||t.includes('hal')||t.includes('dinner')||t.includes('family')) return 'family';
+  if (t.includes('yoga')||t.includes('walk')||t.includes('doctor')||t.includes('health')||t.includes('meditat')||t.includes('strength')||t.includes('appt')||t.includes('medical')) return 'health';
+  return 'admin';
+}
+
+async function fetchGCalEvents(days) {
+  if (!accessToken) return [];
+  const start = days[0].toISOString().split('T')[0]+'T00:00:00Z';
+  const end   = days[6].toISOString().split('T')[0]+'T23:59:59Z';
+  const url   = 'https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(CAL_ID)+'/events?timeMin='+start+'&timeMax='+end+'&singleEvents=true&orderBy=startTime&maxResults=50';
+  try {
+    const res  = await fetch(url, {headers:{Authorization:'Bearer '+accessToken}});
+    const json = await res.json();
+    if (!res.ok) {
+      if (res.status === 401) { clearToken(); updateAuthUI(); showToast('Session expired — please sign in again'); }
+      else showToast('⚠ Calendar error: '+(json?.error?.message||res.status));
+      return [];
+    }
+    return (json.items||[]).map(ev => {
+      const sStr   = ev.start?.dateTime || ev.start?.date || '';
+      const eStr   = ev.end?.dateTime   || ev.end?.date   || '';
+      const sDate  = sStr ? new Date(sStr) : null;
+      const eDate  = eStr ? new Date(eStr) : null;
+      const hasTime = !!ev.start?.dateTime;
+      // Compute minutes since midnight for conflict/sort (0 = unknown)
+      const startMin = hasTime && sDate ? sDate.getHours()*60 + sDate.getMinutes() : 0;
+      const endMin   = hasTime && eDate ? eDate.getHours()*60 + eDate.getMinutes() : (startMin ? startMin+60 : 0);
+      return {
+        title:    ev.summary || 'Event',
+        dateStr:  sDate ? sDate.toDateString() : '',
+        time:     hasTime && sDate
+                    ? sDate.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true})
+                    : 'All day',
+        cat:      categorizeCal(ev.summary),
+        source:   'gcal',
+        startMin: startMin,
+        endMin:   endMin,
+        allDay:   !hasTime,
+      };
+    });
+  } catch(e) { showToast('⚠ Network error'); return []; }
+}
+
+// ── RENDER ──
+function renderWeek(days, gcalEvents=[]) {
+  const scroll = document.getElementById('daysScroll');
+  scroll.innerHTML = '';
+  days.forEach((day) => {
+    const dow     = day.getDay();
+    const dateStr = day.toDateString();
+
+    // Fixed blocks with parsed time ranges
+    const fixed = (FIXED[dow]||[]).map(b => {
+      const {start, end} = parseTimeRange(b.time);
+      return {...b, startMin: start, endMin: end};
+    });
+
+    // GCal blocks for this day, deduped against fixed schedule
+    const calBlocks = (gcalEvents||[])
+      .filter(e => e.dateStr === dateStr)
+      .filter(e => {
+        const t = (e.title||'').toLowerCase();
+        if ((t.includes('ikiora')||t.includes('deep work')) && dow>=1&&dow<=5) return false;
+        if (t.includes('morning ritual')) return false;
+        if (t.includes('meditat')&&t.includes('yoga')&&t.includes('strength')) return false;
+        return true;
+      });
+
+    // Detect conflicts: cal event overlaps any fixed block
+    const conflictSet = new Set();
+    calBlocks.forEach((cal, ci) => {
+      if (cal.allDay) return; // all-day events skip conflict check
+      fixed.forEach(fix => {
+        if (overlaps(cal.startMin, cal.endMin, fix.startMin, fix.endMin)) {
+          conflictSet.add(ci);
+        }
+      });
+    });
+
+    const calWithFlags = calBlocks.map((b, i) => ({...b, conflict: conflictSet.has(i)}));
+
+    // Merge fixed + cal, sort by startMin (all-day events sort to 0 = top)
+    const blocks = [...fixed, ...calWithFlags]
+      .sort((a, b) => a.startMin - b.startMin);
+
+    // Count conflicts for day header warning
+    const conflictCount = conflictSet.size;
+
+    const card = document.createElement('div');
+    card.className = 'day-card' + (isToday(day) ? ' today' : '');
+    card.innerHTML =
+      '<div class="day-header">' +
+        '<div>' +
+          '<div class="day-name">' +
+            fmtDay(day).slice(0,3) +
+            '<span style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:var(--muted);margin-left:3px">' + fmtDay(day).slice(3) + '</span>' +
+          '</div>' +
+          '<div class="day-date">' + fmtDate(day) + '</div>' +
+        '</div>' +
+        (isToday(day) ? '<div class="today-badge">Today</div>' : '') +
+        (conflictCount > 0 ? '<div style="font-size:11px;color:#FF7070;font-weight:600">' + conflictCount + ' conflict' + (conflictCount>1?'s':'') + '</div>' : '') +
+      '</div>' +
+      '<div class="day-body">' + blocks.map(renderBlock).join('') + '</div>';
+    scroll.appendChild(card);
+  });
+  const todayIdx = days.findIndex(d=>isToday(d));
+  const cards    = scroll.querySelectorAll('.day-card');
+  if (todayIdx>=0&&cards[todayIdx]) setTimeout(()=>cards[todayIdx].scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}),300);
+}
+
+function renderBlock(b) {
+  const cat      = b.cat || 'admin';
+  const isConflict = !!b.conflict;
+  const classes  = 'block ' + cat + (isConflict ? ' conflict' : '');
+  const timePrefix = cat === 'locked' ? '🔒 ' : (isConflict ? '⚠️ ' : '');
+  const badge = b.source === 'gcal'
+    ? (isConflict
+        ? '<div class="badge conflict-badge">⚠ Conflict</div>'
+        : '<div class="badge">Cal</div>')
+    : '';
+  return '<div class="' + classes + '">' +
+    (b.time ? '<div class="block-time">' + timePrefix + b.time + '</div>' : '') +
+    '<div class="block-title">' + b.title + '</div>' +
+    (b.sub ? '<div class="block-sub">' + b.sub + '</div>' : '') +
+    (isConflict ? '<div class="block-sub" style="color:#FF7070;margin-top:4px">Overlaps fixed block</div>' : '') +
+    badge +
+    '</div>';
+}
+
+// ── REFRESH ──
+function askRefresh()    { document.getElementById('refreshModal').classList.add('show'); }
+function closeModal()    { document.getElementById('refreshModal').classList.remove('show'); }
+async function confirmRefresh() { closeModal(); await doRefresh(); }
+
+async function doRefresh(silent=false) {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+  document.getElementById('loadingState').classList.add('active');
+  document.getElementById('daysScroll').style.opacity = '0.3';
+
+  const days = getWeekDays();
+  const gcalEvents = await fetchGCalEvents(days);
+
+  document.getElementById('loadingState').classList.remove('active');
+  document.getElementById('daysScroll').style.opacity = '1';
+  setWeekLabel(days);
+  renderWeek(days, gcalEvents);
+
+  localStorage.setItem(KEY_CACHE, JSON.stringify({ts:Date.now(), days:days.map(d=>d.toISOString()), gcalEvents}));
+
+  const connected = isConnected();
+  document.getElementById('statusDot').style.background = connected && gcalEvents.length > 0 ? 'var(--health)' : 'var(--admin)';
+  document.getElementById('statusText').textContent = connected
+    ? 'Synced · ' + gcalEvents.length + ' event' + (gcalEvents.length !== 1 ? 's' : '') + ' · ' + new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})
+    : 'Fixed schedule — tap Sign in to load your calendar';
+  document.getElementById('statusBar').style.display = 'flex';
+
+  btn.classList.remove('loading'); btn.disabled = false;
+  if (!silent) showToast(gcalEvents.length > 0 ? '✓ ' + gcalEvents.length + ' events loaded' : '✓ Schedule loaded');
+}
+
+// ── TOAST ──
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── INIT ──
+function init() {
+  const hasToken = loadToken();
+  updateAuthUI();
+  initGoogleAuth();
+
+  const days = getWeekDays();
+  setWeekLabel(days);
+  document.getElementById('sectionLabel').textContent = 'This Week';
+
+  const raw   = localStorage.getItem(KEY_CACHE);
+  const cache = raw ? JSON.parse(raw) : null;
+  if (cache && (Date.now() - cache.ts < 4*60*60*1000)) {
+    const cachedDays = cache.days.map(s => new Date(s));
+    renderWeek(cachedDays, cache.gcalEvents || []);
+    document.getElementById('statusDot').style.background = isConnected() && cache.gcalEvents?.length > 0 ? 'var(--health)' : 'var(--admin)';
+    document.getElementById('statusText').textContent = 'Cached · ' + new Date(cache.ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) + ' · tap Refresh for latest';
+    document.getElementById('statusBar').style.display = 'flex';
+    setTimeout(askRefresh, 1200);
+  } else {
+    renderWeek(days);
+    if (hasToken) {
+      document.getElementById('statusText').textContent = 'Loading your calendar…';
+      document.getElementById('statusBar').style.display = 'flex';
+      setTimeout(() => doRefresh(true), 600);
+    } else {
+      setTimeout(askRefresh, 800);
+    }
+  }
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
